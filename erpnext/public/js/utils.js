@@ -603,20 +603,60 @@ erpnext.utils.update_child_items = function (opts) {
 	const has_reserved_stock = opts.has_reserved_stock ? true : false;
 	const get_precision = (fieldname) => child_meta.fields.find((f) => f.fieldname == fieldname).precision;
 
-	this.data = frm.doc[opts.child_docname].map((d) => {
-		return {
-			docname: d.name,
-			name: d.name,
-			item_code: d.item_code,
-			delivery_date: d.delivery_date,
-			schedule_date: d.schedule_date,
-			conversion_factor: d.conversion_factor,
-			qty: d.qty,
-			rate: d.rate,
-			uom: d.uom,
-			fg_item: d.fg_item,
-			fg_item_qty: d.fg_item_qty,
-		};
+	// this.data = frm.doc[opts.child_docname].map((d) => {
+	this.data = frm.doc[opts.child_docname].forEach((d) => {
+	    const billed_qty = d.billed_qty || 0;
+	    const unbilled_qty = flt(d.qty) - flt(billed_qty);
+
+	    // 1. Add billed (locked) row if billed_qty > 0
+	    if (billed_qty > 0) {
+	        this.data.push({
+	            docname: d.name,
+	            name: d.name,
+	            item_code: d.item_code,
+	            delivery_date: d.delivery_date,
+	            schedule_date: d.schedule_date,
+	            conversion_factor: d.conversion_factor,
+	            qty: billed_qty,
+	            rate: d.rate,
+	            uom: d.uom,
+	            fg_item: d.fg_item,
+	            fg_item_qty: d.fg_item_qty,
+	            __is_billed_row: true,
+	        });
+	    }
+
+	    // 2. Add unbilled (editable) row if remaining qty > 0
+	    if (unbilled_qty > 0) {
+	        this.data.push({
+	            docname: d.name,
+	            name: d.name,
+	            item_code: d.item_code,
+	            delivery_date: d.delivery_date,
+	            schedule_date: d.schedule_date,
+	            conversion_factor: d.conversion_factor,
+	            qty: unbilled_qty,
+	            rate: d.rate,
+	            uom: d.uom,
+	            fg_item: d.fg_item,
+	            fg_item_qty: d.fg_item_qty,
+	            __is_billed_row: false,
+	        });
+	    }
+	    return this.data
+		// return {
+		// 	docname: d.name,
+		// 	name: d.name,
+		// 	item_code: d.item_code,
+		// 	delivery_date: d.delivery_date,
+		// 	schedule_date: d.schedule_date,
+		// 	conversion_factor: d.conversion_factor,
+		// 	qty: d.qty,
+		// 	rate: d.rate,
+		// 	uom: d.uom,
+		// 	fg_item: d.fg_item,
+		// 	fg_item_qty: d.fg_item_qty,
+		// };
 	});
 
 	const fields = [
@@ -687,20 +727,22 @@ erpnext.utils.update_child_items = function (opts) {
 			fieldtype: "Float",
 			fieldname: "qty",
 			default: 0,
-			read_only: 0,
+			// read_only: 0,
 			in_list_view: 1,
 			label: __("Qty"),
 			precision: get_precision("qty"),
+			read_only: (doc) => doc.__is_billed_row === true
 		},
 		{
 			fieldtype: "Currency",
 			fieldname: "rate",
 			options: "currency",
 			default: 0,
-			read_only: 0,
+			// read_only: 0,
 			in_list_view: 1,
 			label: __("Rate"),
 			precision: get_precision("rate"),
+			read_only: (doc) => doc.__is_billed_row === true
 		},
 	];
 

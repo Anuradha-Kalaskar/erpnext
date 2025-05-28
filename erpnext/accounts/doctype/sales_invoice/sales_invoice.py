@@ -435,6 +435,8 @@ class SalesInvoice(SellingController):
 
 		self.check_prev_docstatus()
 
+		self.set_billed_qty_in_sales_order()
+
 		if self.is_return and not self.update_billed_amount_in_sales_order:
 			# NOTE status updating bypassed for is_return
 			self.status_updater = []
@@ -587,6 +589,16 @@ class SalesInvoice(SellingController):
 		)
 
 		self.delete_auto_created_batches()
+
+	def set_billed_qty_in_sales_order(self):
+		for si_item in self.items:
+			if si_item.sales_order and si_item.so_detail:
+				so_item_qty = frappe.db.get_value("Sales Order item", {'parent':si_item.sales_order, 'name':si_item.so_detail}, 'qty')
+				if so_item_qty == si_item.qty:
+					self.billed_qty = so_item_qty
+				elif so_item_qty > si_item.qty:
+					self.billed_qty = so_item_qty - si_item.qty
+
 
 	def update_status_updater_args(self):
 		if cint(self.update_stock):

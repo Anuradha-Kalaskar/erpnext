@@ -26,6 +26,7 @@ class SalesOrderItem(Document):
 		base_rate: DF.Currency
 		base_rate_with_margin: DF.Currency
 		billed_amt: DF.Currency
+		billed_qty: DF.Float
 		blanket_order: DF.Link | None
 		blanket_order_rate: DF.Currency
 		bom_no: DF.Link | None
